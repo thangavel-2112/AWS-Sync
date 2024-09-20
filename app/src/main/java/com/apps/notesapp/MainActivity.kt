@@ -28,6 +28,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.amplifyframework.AmplifyException
 import com.amplifyframework.api.aws.AWSApiPlugin
@@ -56,6 +58,8 @@ class MainActivity : ComponentActivity() {
             NotesAppTheme {
                 var showDialog by remember { mutableStateOf(false) }
                 val notesViewModel: NotesViewModel = viewModel()
+                val lifecycleOwner = LocalLifecycleOwner.current
+                observeNoteCreation(notesViewModel, lifecycleOwner)
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     topBar = {
@@ -99,10 +103,27 @@ class MainActivity : ComponentActivity() {
                                 showDialog = false
                             },
                             onSubmit = { title, description ->
-                                notesViewModel.createNote(title,description)
+                                notesViewModel.createNote(title, description)
                             }
                         )
                     }
+                }
+            }
+        }
+    }
+
+    private fun observeNoteCreation(
+        notesViewModel: NotesViewModel,
+        lifecycleOwner: LifecycleOwner
+    ) {
+        notesViewModel.createNoteResponse.observe(lifecycleOwner) {
+            when (it) {
+                true -> {
+                    Toast.makeText(this, "Note created successfully", Toast.LENGTH_SHORT).show()
+                }
+
+                else -> {
+                    Toast.makeText(this, "Couldn't create note!", Toast.LENGTH_SHORT).show()
                 }
             }
         }

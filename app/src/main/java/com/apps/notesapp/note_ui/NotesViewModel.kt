@@ -9,6 +9,7 @@ import kotlinx.coroutines.launch
 
 class NotesViewModel : ViewModel() {
     val notes = MutableLiveData<List<Note>>(emptyList())
+    val createNoteResponse = MutableLiveData<Boolean>()
 
     init {
         fetchNotes()
@@ -27,7 +28,10 @@ class NotesViewModel : ViewModel() {
         viewModelScope.launch {
             NoteFunctions.note_crud.createNote(title, description).collect { isSuccess ->
                 if (isSuccess) {
+                    createNoteResponse.value = true
                     fetchNotes()
+                } else {
+                    createNoteResponse.value = false
                 }
             }
         }
