@@ -28,6 +28,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.amplifyframework.AmplifyException
 import com.amplifyframework.api.aws.AWSApiPlugin
 import com.amplifyframework.core.Amplify
@@ -35,6 +36,7 @@ import com.amplifyframework.core.plugin.Plugin
 import com.amplifyframework.datastore.AWSDataStorePlugin
 import com.apps.notesapp.note_db.NoteFunctions
 import com.apps.notesapp.note_ui.CreateNoteDialog
+import com.apps.notesapp.note_ui.NotesViewModel
 import com.apps.notesapp.note_ui.ViewNotes
 import com.apps.notesapp.ui.theme.NotesAppTheme
 
@@ -53,8 +55,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             NotesAppTheme {
                 var showDialog by remember { mutableStateOf(false) }
-                var shouldRefresh by remember { mutableStateOf(false) }
-
+                val notesViewModel: NotesViewModel = viewModel()
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     topBar = {
@@ -89,9 +90,7 @@ class MainActivity : ComponentActivity() {
                                 .fillMaxWidth()
                                 .padding(top = 6.dp)
                         )
-                        ViewNotes() {
-                            shouldRefresh = true
-                        }
+                        ViewNotes(notesViewModel)
                     }
                     if (showDialog) {
                         CreateNoteDialog(
@@ -100,30 +99,9 @@ class MainActivity : ComponentActivity() {
                                 showDialog = false
                             },
                             onSubmit = { title, description ->
-                                NoteFunctions.note_crud.createNote(title, description) { res ->
-                                    runOnUiThread {
-                                        if (res) {
-                                            Toast.makeText(
-                                                this@MainActivity,
-                                                "Note created successfully",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        } else {
-                                            Toast.makeText(
-                                                this@MainActivity,
-                                                "Couldn't save your note !",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                    }
-                                }
+                                notesViewModel.createNote(title,description)
                             }
                         )
-                    }
-                    if (shouldRefresh) {
-                        ViewNotes {
-                            shouldRefresh = false
-                        }
                     }
                 }
             }
