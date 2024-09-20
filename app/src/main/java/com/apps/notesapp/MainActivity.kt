@@ -36,7 +36,6 @@ import com.amplifyframework.api.aws.AWSApiPlugin
 import com.amplifyframework.core.Amplify
 import com.amplifyframework.core.plugin.Plugin
 import com.amplifyframework.datastore.AWSDataStorePlugin
-import com.apps.notesapp.note_db.NoteFunctions
 import com.apps.notesapp.note_ui.CreateNoteDialog
 import com.apps.notesapp.note_ui.NotesViewModel
 import com.apps.notesapp.note_ui.ViewNotes
@@ -98,6 +97,10 @@ class MainActivity : ComponentActivity() {
                     }
                     if (showDialog) {
                         CreateNoteDialog(
+                            header = "Create Note",
+                            titleTxt = "",
+                            descriptionTxt = "",
+                            buttonText = "Submit",
                             onDismissRequest =
                             {
                                 showDialog = false
@@ -124,6 +127,30 @@ class MainActivity : ComponentActivity() {
 
                 else -> {
                     Toast.makeText(this, "Couldn't create note!", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        notesViewModel.editNoteResponse.observe(lifecycleOwner) {
+            when (it) {
+                true -> {
+                    Toast.makeText(this, "Note edited successfully", Toast.LENGTH_SHORT).show()
+                }
+
+                else -> {
+                    Toast.makeText(this, "Couldn't edit note!", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        notesViewModel.deleteNoteResponse.observe(lifecycleOwner) {
+            when (it) {
+                true -> {
+                    Toast.makeText(this, "Note deleted successfully", Toast.LENGTH_SHORT).show()
+                }
+
+                else -> {
+                    Toast.makeText(this, "Couldn't delete note!", Toast.LENGTH_SHORT).show()
                 }
             }
         }

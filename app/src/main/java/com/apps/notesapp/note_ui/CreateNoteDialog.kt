@@ -19,15 +19,19 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun CreateNoteDialog(
+    header: String,
+    titleTxt: String,
+    descriptionTxt: String,
+    buttonText: String,
     onDismissRequest: () -> Unit,
     onSubmit: (String, String) -> Unit
 ) {
-    var title by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
+    var title by remember { mutableStateOf(titleTxt) }
+    var description by remember { mutableStateOf(descriptionTxt) }
 
     AlertDialog(
         onDismissRequest = onDismissRequest,
-        title = { Text(text = "Create Note") },
+        title = { Text(text = header) },
         text = {
             Column {
                 OutlinedTextField(
@@ -54,9 +58,9 @@ fun CreateNoteDialog(
                     onSubmit(title, description)
                     onDismissRequest()
                 },
-                enabled = title.isNotEmpty()
+                enabled = title.isNotEmpty() && description.isNotEmpty()
             ) {
-                Text("Submit")
+                Text(buttonText)
             }
         },
         dismissButton = {
