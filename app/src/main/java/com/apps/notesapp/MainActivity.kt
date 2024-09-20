@@ -29,7 +29,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.amplifyframework.AmplifyException
+import com.amplifyframework.api.aws.AWSApiPlugin
 import com.amplifyframework.core.Amplify
+import com.amplifyframework.core.plugin.Plugin
 import com.amplifyframework.datastore.AWSDataStorePlugin
 import com.apps.notesapp.note_db.NoteFunctions
 import com.apps.notesapp.note_ui.CreateNoteDialog
@@ -41,6 +43,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         try {
             Amplify.addPlugin(AWSDataStorePlugin())
+            Amplify.addPlugin<Plugin<*>>(AWSApiPlugin())
             Amplify.configure(applicationContext)
 
             Log.i("MyAmplifyApp", "Initialized Amplify")

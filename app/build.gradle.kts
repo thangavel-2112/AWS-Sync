@@ -75,7 +75,7 @@ dependencies {
     debugImplementation(libs.androidx.ui.test.manifest)
 
     implementation("com.amplifyframework:aws-datastore:2.19.1")
-
+    implementation("com.amplifyframework:aws-api:2.19.1")
     // Support for Java 8 features
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:1.1.5")
 }
