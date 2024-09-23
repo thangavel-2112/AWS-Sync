@@ -1,6 +1,12 @@
 type Note @model @auth(rules: [{allow: public}]) {
-  id: ID!
-  title: String!
-  description: String
+    id: ID!
+    title: String!
+    description: String,
+    priority: Priority
 }
- 
+
+enum Priority {
+    LOW,
+    MID,
+    HIGH
+}

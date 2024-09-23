@@ -5,6 +5,7 @@ query GetNote($id: ID!) {
     id
     title
     description
+    priority
     createdAt
     updatedAt
     _version
@@ -24,6 +25,7 @@ query ListNotes(
       id
       title
       description
+      priority
       createdAt
       updatedAt
       _version
@@ -53,6 +55,7 @@ query SyncNotes(
       id
       title
       description
+      priority
       createdAt
       updatedAt
       _version

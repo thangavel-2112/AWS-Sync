@@ -5,6 +5,7 @@ import com.amplifyframework.core.Amplify
 import com.amplifyframework.core.model.query.Where
 import com.amplifyframework.datastore.DataStoreException
 import com.amplifyframework.datastore.generated.model.Note
+import com.amplifyframework.datastore.generated.model.Priority
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -15,33 +16,35 @@ import kotlin.coroutines.resumeWithException
 
 class NoteFunctions {
 
-    fun createNote(title: String, description: String): Flow<Boolean> = callbackFlow {
-        val note = Note.builder()
-            .title(title)
-            .description(description)
-            .build()
+    fun createNote(title: String, description: String, priority: Priority): Flow<Boolean> =
+        callbackFlow {
+            val note = Note.builder()
+                .title(title)
+                .description(description)
+                .priority(priority)
+                .build()
 
-        try {
-            Amplify.DataStore.save(note,
-                {
-                    // Note saved successfully
-                    Log.d("TAG", "createNote: success")
-                    trySend(true)
-                },
-                {
-                    // Note is not saved, failure
-                    Log.d("TAG", "createNote: failure")
-                    trySend(false)
-                }
-            )
-        } catch (err: DataStoreException) {
-            // Error occurred while saving
-            Log.e("TAG", "createNote: $err")
-            trySend(false)
+            try {
+                Amplify.DataStore.save(note,
+                    {
+                        // Note saved successfully
+                        Log.d("TAG", "createNote: success")
+                        trySend(true)
+                    },
+                    {
+                        // Note is not saved, failure
+                        Log.d("TAG", "createNote: failure")
+                        trySend(false)
+                    }
+                )
+            } catch (err: DataStoreException) {
+                // Error occurred while saving
+                Log.e("TAG", "createNote: $err")
+                trySend(false)
+            }
+
+            awaitClose { }
         }
-
-        awaitClose { }
-    }
 
 
     fun fetchNotes(): Flow<List<Note>> = flow {
@@ -61,13 +64,14 @@ class NoteFunctions {
                 }
             )
         }
-        emit(notes)
+        emit(notes.reversed())
     }
 
     fun editNoteById(
         noteId: String,
         newTitle: String,
-        newDescription: String
+        newDescription: String,
+        priority: Priority
     ): Flow<Boolean> = callbackFlow {
         Amplify.DataStore.query(
             Note::class.java,
@@ -78,6 +82,7 @@ class NoteFunctions {
                     val updatedNote = noteToEdit.copyOfBuilder()
                         .title(newTitle)
                         .description(newDescription)
+                        .priority(priority)
                         .build()
 
                     Amplify.DataStore.save(updatedNote,

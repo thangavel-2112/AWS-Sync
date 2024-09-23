@@ -31,24 +31,43 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import aws.smithy.kotlin.runtime.util.type
 import com.amplifyframework.AmplifyException
 import com.amplifyframework.api.aws.AWSApiPlugin
 import com.amplifyframework.core.Amplify
+import com.amplifyframework.core.model.query.predicate.QueryPredicates
 import com.amplifyframework.core.plugin.Plugin
 import com.amplifyframework.datastore.AWSDataStorePlugin
+import com.amplifyframework.datastore.DataStoreConfiguration
+import com.amplifyframework.datastore.DataStoreItemChange
+import com.amplifyframework.datastore.generated.model.Note
+import com.amplifyframework.datastore.generated.model.Priority
 import com.apps.notesapp.note_ui.CreateNoteDialog
 import com.apps.notesapp.note_ui.NotesViewModel
 import com.apps.notesapp.note_ui.ViewNotes
 import com.apps.notesapp.ui.theme.NotesAppTheme
+import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         try {
-            Amplify.addPlugin(AWSDataStorePlugin())
+            Amplify.addPlugin(AWSDataStorePlugin.builder()
+                .dataStoreConfiguration(
+                    DataStoreConfiguration.builder()
+                        .errorHandler { error -> Log.e("Amplify", "DataStore Error", error) }
+                        .syncExpression(Note::class.java) { QueryPredicates.all() }
+                        .syncInterval(10, TimeUnit.SECONDS)
+                        .build()
+                )
+                .build()
+            )
             Amplify.addPlugin<Plugin<*>>(AWSApiPlugin())
             Amplify.configure(applicationContext)
-
+            Amplify.DataStore.start(
+                { Log.i("Amplify", "DataStore sync started successfully") },
+                { error -> Log.e("Amplify", "Failed to start DataStore sync", error) }
+            )
             Log.i("MyAmplifyApp", "Initialized Amplify")
         } catch (error: AmplifyException) {
             Log.e("MyAmplifyApp", "Could not initialize Amplify", error)
@@ -59,6 +78,7 @@ class MainActivity : ComponentActivity() {
                 val notesViewModel: NotesViewModel = viewModel()
                 val lifecycleOwner = LocalLifecycleOwner.current
                 observeNoteCreation(notesViewModel, lifecycleOwner)
+                observeCloudChanges(notesViewModel)
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     topBar = {
@@ -100,13 +120,14 @@ class MainActivity : ComponentActivity() {
                             header = "Create Note",
                             titleTxt = "",
                             descriptionTxt = "",
+                            priority = Priority.LOW,
                             buttonText = "Submit",
                             onDismissRequest =
                             {
                                 showDialog = false
                             },
-                            onSubmit = { title, description ->
-                                notesViewModel.createNote(title, description)
+                            onSubmit = { title, description, priority ->
+                                notesViewModel.createNote(title, description, priority)
                             }
                         )
                     }
@@ -119,6 +140,7 @@ class MainActivity : ComponentActivity() {
         notesViewModel: NotesViewModel,
         lifecycleOwner: LifecycleOwner
     ) {
+
         notesViewModel.createNoteResponse.observe(lifecycleOwner) {
             when (it) {
                 true -> {
@@ -154,5 +176,31 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }
+    }
+
+    private fun observeCloudChanges(notesViewModel: NotesViewModel) {
+        Amplify.DataStore.observe(Note::class.java,
+            { Log.i("Amplify", "Observation started.") },
+            { change ->
+                when (change.type()) {
+                    DataStoreItemChange.Type.CREATE -> {
+                        notesViewModel.fetchNotes()
+                        Log.i("Amplify", "New note created: ${change.item()}")
+                    }
+
+                    DataStoreItemChange.Type.UPDATE -> {
+                        notesViewModel.fetchNotes()
+                        Log.i("Amplify", "Note updated: ${change.item()}")
+                    }
+
+                    DataStoreItemChange.Type.DELETE -> {
+                        notesViewModel.fetchNotes()
+                        Log.i("Amplify", "Note deleted: ${change.item()}")
+                    }
+                }
+            },
+            { Log.e("Amplify", "Error observing changes", it) },
+            { Log.i("Amplify", "Observation completed.") }
+        )
     }
 }

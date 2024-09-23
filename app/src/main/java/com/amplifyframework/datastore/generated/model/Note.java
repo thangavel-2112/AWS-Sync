@@ -29,9 +29,11 @@ public final class Note implements Model {
   public static final QueryField ID = field("Note", "id");
   public static final QueryField TITLE = field("Note", "title");
   public static final QueryField DESCRIPTION = field("Note", "description");
+  public static final QueryField PRIORITY = field("Note", "priority");
   private final @ModelField(targetType="ID", isRequired = true) String id;
   private final @ModelField(targetType="String", isRequired = true) String title;
   private final @ModelField(targetType="String") String description;
+  private final @ModelField(targetType="Priority") Priority priority;
   private @ModelField(targetType="AWSDateTime", isReadOnly = true) Temporal.DateTime createdAt;
   private @ModelField(targetType="AWSDateTime", isReadOnly = true) Temporal.DateTime updatedAt;
   /** @deprecated This API is internal to Amplify and should not be used. */
@@ -52,6 +54,10 @@ public final class Note implements Model {
       return description;
   }
   
+  public Priority getPriority() {
+      return priority;
+  }
+  
   public Temporal.DateTime getCreatedAt() {
       return createdAt;
   }
@@ -60,10 +66,11 @@ public final class Note implements Model {
       return updatedAt;
   }
   
-  private Note(String id, String title, String description) {
+  private Note(String id, String title, String description, Priority priority) {
     this.id = id;
     this.title = title;
     this.description = description;
+    this.priority = priority;
   }
   
   @Override
@@ -77,6 +84,7 @@ public final class Note implements Model {
       return ObjectsCompat.equals(getId(), note.getId()) &&
               ObjectsCompat.equals(getTitle(), note.getTitle()) &&
               ObjectsCompat.equals(getDescription(), note.getDescription()) &&
+              ObjectsCompat.equals(getPriority(), note.getPriority()) &&
               ObjectsCompat.equals(getCreatedAt(), note.getCreatedAt()) &&
               ObjectsCompat.equals(getUpdatedAt(), note.getUpdatedAt());
       }
@@ -88,6 +96,7 @@ public final class Note implements Model {
       .append(getId())
       .append(getTitle())
       .append(getDescription())
+      .append(getPriority())
       .append(getCreatedAt())
       .append(getUpdatedAt())
       .toString()
@@ -101,6 +110,7 @@ public final class Note implements Model {
       .append("id=" + String.valueOf(getId()) + ", ")
       .append("title=" + String.valueOf(getTitle()) + ", ")
       .append("description=" + String.valueOf(getDescription()) + ", ")
+      .append("priority=" + String.valueOf(getPriority()) + ", ")
       .append("createdAt=" + String.valueOf(getCreatedAt()) + ", ")
       .append("updatedAt=" + String.valueOf(getUpdatedAt()))
       .append("}")
@@ -123,6 +133,7 @@ public final class Note implements Model {
     return new Note(
       id,
       null,
+      null,
       null
     );
   }
@@ -130,7 +141,8 @@ public final class Note implements Model {
   public CopyOfBuilder copyOfBuilder() {
     return new CopyOfBuilder(id,
       title,
-      description);
+      description,
+      priority);
   }
   public interface TitleStep {
     BuildStep title(String title);
@@ -141,6 +153,7 @@ public final class Note implements Model {
     Note build();
     BuildStep id(String id);
     BuildStep description(String description);
+    BuildStep priority(Priority priority);
   }
   
 
@@ -148,14 +161,16 @@ public final class Note implements Model {
     private String id;
     private String title;
     private String description;
+    private Priority priority;
     public Builder() {
       
     }
     
-    private Builder(String id, String title, String description) {
+    private Builder(String id, String title, String description, Priority priority) {
       this.id = id;
       this.title = title;
       this.description = description;
+      this.priority = priority;
     }
     
     @Override
@@ -165,7 +180,8 @@ public final class Note implements Model {
         return new Note(
           id,
           title,
-          description);
+          description,
+          priority);
     }
     
     @Override
@@ -181,6 +197,12 @@ public final class Note implements Model {
         return this;
     }
     
+    @Override
+     public BuildStep priority(Priority priority) {
+        this.priority = priority;
+        return this;
+    }
+    
     /**
      * @param id id
      * @return Current Builder instance, for fluent method chaining
@@ -193,8 +215,8 @@ public final class Note implements Model {
   
 
   public final class CopyOfBuilder extends Builder {
-    private CopyOfBuilder(String id, String title, String description) {
-      super(id, title, description);
+    private CopyOfBuilder(String id, String title, String description, Priority priority) {
+      super(id, title, description, priority);
       Objects.requireNonNull(title);
     }
     
@@ -206,6 +228,11 @@ public final class Note implements Model {
     @Override
      public CopyOfBuilder description(String description) {
       return (CopyOfBuilder) super.description(description);
+    }
+    
+    @Override
+     public CopyOfBuilder priority(Priority priority) {
+      return (CopyOfBuilder) super.priority(priority);
     }
   }
   

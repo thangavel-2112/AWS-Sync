@@ -4,6 +4,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.amplifyframework.datastore.generated.model.Note
+import com.amplifyframework.datastore.generated.model.Priority
 import com.apps.notesapp.note_db.NoteFunctions
 import kotlinx.coroutines.launch
 
@@ -17,7 +18,7 @@ class NotesViewModel : ViewModel() {
         fetchNotes()
     }
 
-    private fun fetchNotes() {
+    fun fetchNotes() {
         viewModelScope.launch {
             NoteFunctions.note_crud.fetchNotes()
                 .collect { notesList ->
@@ -26,26 +27,18 @@ class NotesViewModel : ViewModel() {
         }
     }
 
-    fun createNote(title: String, description: String) {
+    fun createNote(title: String, description: String,priority: Priority) {
         viewModelScope.launch {
-            NoteFunctions.note_crud.createNote(title, description).collect { isSuccess ->
-                if (isSuccess) {
-                    createNoteResponse.value = true
-                    fetchNotes()
-                } else {
-                    createNoteResponse.value = false
-                }
+            NoteFunctions.note_crud.createNote(title, description,priority).collect { isSuccess ->
+                createNoteResponse.value = isSuccess
             }
         }
     }
 
-    fun editNote(noteId: String, title: String, description: String) {
+    fun editNote(noteId: String, title: String, description: String,priority: Priority) {
         viewModelScope.launch {
-            NoteFunctions.note_crud.editNoteById(noteId, title, description).collect { isSuccess ->
+            NoteFunctions.note_crud.editNoteById(noteId, title, description,priority).collect { isSuccess ->
                 editNoteResponse.value = isSuccess
-                if (isSuccess) {
-                    fetchNotes()
-                }
             }
         }
     }
@@ -54,9 +47,6 @@ class NotesViewModel : ViewModel() {
         viewModelScope.launch {
             NoteFunctions.note_crud.deleteNoteById(noteId).collect { isDeleted ->
                 deleteNoteResponse.value = isDeleted
-                if (isDeleted) {
-                    fetchNotes()
-                }
             }
         }
     }

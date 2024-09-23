@@ -1,6 +1,5 @@
 package com.apps.notesapp.note_ui
 
-import android.util.Log
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.AlertDialog
@@ -12,6 +11,7 @@ import androidx.compose.runtime.livedata.observeAsState
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import com.amplifyframework.datastore.generated.model.Priority
 
 @Composable
 fun ViewNotes(viewModel: NotesViewModel) {
@@ -21,6 +21,7 @@ fun ViewNotes(viewModel: NotesViewModel) {
     var noteId by remember { mutableStateOf("") }
     var showDialog by remember { mutableStateOf(false) }
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var priority by remember { mutableStateOf(Priority.LOW) }
     LazyColumn {
         items(notesList) { note ->
             NoteCard(
@@ -31,6 +32,7 @@ fun ViewNotes(viewModel: NotesViewModel) {
                     descriptionTxt = note.description
                     noteId = note.id
                     showDialog = true
+                    priority = if (note.priority == null) Priority.LOW else note.priority
                 }
             ) {
                 showDeleteDialog = true
@@ -43,14 +45,14 @@ fun ViewNotes(viewModel: NotesViewModel) {
             header = "Edit Note",
             titleTxt = titleTxt,
             descriptionTxt = descriptionTxt,
+            priority = priority,
             buttonText = "Edit",
             onDismissRequest =
             {
                 showDialog = false
             },
-            onSubmit = { title, description ->
-                Log.e("TAG", "ViewNotes: edit ${title} ${description} ")
-                viewModel.editNote(noteId, title, description)
+            onSubmit = { title, description, priority ->
+                viewModel.editNote(noteId, title, description, priority)
             }
         )
     }
