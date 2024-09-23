@@ -28,21 +28,46 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.viewmodel.compose.viewModel
+import aws.smithy.kotlin.runtime.util.type
 import com.amplifyframework.AmplifyException
+import com.amplifyframework.api.aws.AWSApiPlugin
 import com.amplifyframework.core.Amplify
+import com.amplifyframework.core.model.query.predicate.QueryPredicates
+import com.amplifyframework.core.plugin.Plugin
 import com.amplifyframework.datastore.AWSDataStorePlugin
-import com.apps.notesapp.note_db.NoteFunctions
+import com.amplifyframework.datastore.DataStoreConfiguration
+import com.amplifyframework.datastore.DataStoreItemChange
+import com.amplifyframework.datastore.generated.model.Note
+import com.amplifyframework.datastore.generated.model.Priority
 import com.apps.notesapp.note_ui.CreateNoteDialog
+import com.apps.notesapp.note_ui.NotesViewModel
 import com.apps.notesapp.note_ui.ViewNotes
 import com.apps.notesapp.ui.theme.NotesAppTheme
+import java.util.concurrent.TimeUnit
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         try {
-            Amplify.addPlugin(AWSDataStorePlugin())
+            Amplify.addPlugin(AWSDataStorePlugin.builder()
+                .dataStoreConfiguration(
+                    DataStoreConfiguration.builder()
+                        .errorHandler { error -> Log.e("Amplify", "DataStore Error", error) }
+                        .syncExpression(Note::class.java) { QueryPredicates.all() }
+                        .syncInterval(10, TimeUnit.SECONDS)
+                        .build()
+                )
+                .build()
+            )
+            Amplify.addPlugin<Plugin<*>>(AWSApiPlugin())
             Amplify.configure(applicationContext)
-
+            Amplify.DataStore.start(
+                { Log.i("Amplify", "DataStore sync started successfully") },
+                { error -> Log.e("Amplify", "Failed to start DataStore sync", error) }
+            )
             Log.i("MyAmplifyApp", "Initialized Amplify")
         } catch (error: AmplifyException) {
             Log.e("MyAmplifyApp", "Could not initialize Amplify", error)
@@ -50,8 +75,10 @@ class MainActivity : ComponentActivity() {
         setContent {
             NotesAppTheme {
                 var showDialog by remember { mutableStateOf(false) }
-                var shouldRefresh by remember { mutableStateOf(false) }
-
+                val notesViewModel: NotesViewModel = viewModel()
+                val lifecycleOwner = LocalLifecycleOwner.current
+                observeNoteCreation(notesViewModel, lifecycleOwner)
+                observeCloudChanges(notesViewModel)
                 Scaffold(
                     modifier = Modifier.fillMaxSize(),
                     topBar = {
@@ -86,44 +113,94 @@ class MainActivity : ComponentActivity() {
                                 .fillMaxWidth()
                                 .padding(top = 6.dp)
                         )
-                        ViewNotes() {
-                            shouldRefresh = true
-                        }
+                        ViewNotes(notesViewModel)
                     }
                     if (showDialog) {
                         CreateNoteDialog(
+                            header = "Create Note",
+                            titleTxt = "",
+                            descriptionTxt = "",
+                            priority = Priority.LOW,
+                            buttonText = "Submit",
                             onDismissRequest =
                             {
                                 showDialog = false
                             },
-                            onSubmit = { title, description ->
-                                NoteFunctions.note_crud.createNote(title, description) { res ->
-                                    runOnUiThread {
-                                        if (res) {
-                                            Toast.makeText(
-                                                this@MainActivity,
-                                                "Note created successfully",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        } else {
-                                            Toast.makeText(
-                                                this@MainActivity,
-                                                "Couldn't save your note !",
-                                                Toast.LENGTH_SHORT
-                                            ).show()
-                                        }
-                                    }
-                                }
+                            onSubmit = { title, description, priority ->
+                                notesViewModel.createNote(title, description, priority)
                             }
                         )
-                    }
-                    if (shouldRefresh) {
-                        ViewNotes {
-                            shouldRefresh = false
-                        }
                     }
                 }
             }
         }
+    }
+
+    private fun observeNoteCreation(
+        notesViewModel: NotesViewModel,
+        lifecycleOwner: LifecycleOwner
+    ) {
+
+        notesViewModel.createNoteResponse.observe(lifecycleOwner) {
+            when (it) {
+                true -> {
+                    Toast.makeText(this, "Note created successfully", Toast.LENGTH_SHORT).show()
+                }
+
+                else -> {
+                    Toast.makeText(this, "Couldn't create note!", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        notesViewModel.editNoteResponse.observe(lifecycleOwner) {
+            when (it) {
+                true -> {
+                    Toast.makeText(this, "Note edited successfully", Toast.LENGTH_SHORT).show()
+                }
+
+                else -> {
+                    Toast.makeText(this, "Couldn't edit note!", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+
+        notesViewModel.deleteNoteResponse.observe(lifecycleOwner) {
+            when (it) {
+                true -> {
+                    Toast.makeText(this, "Note deleted successfully", Toast.LENGTH_SHORT).show()
+                }
+
+                else -> {
+                    Toast.makeText(this, "Couldn't delete note!", Toast.LENGTH_SHORT).show()
+                }
+            }
+        }
+    }
+
+    private fun observeCloudChanges(notesViewModel: NotesViewModel) {
+        Amplify.DataStore.observe(Note::class.java,
+            { Log.i("Amplify", "Observation started.") },
+            { change ->
+                when (change.type()) {
+                    DataStoreItemChange.Type.CREATE -> {
+                        notesViewModel.fetchNotes()
+                        Log.i("Amplify", "New note created: ${change.item()}")
+                    }
+
+                    DataStoreItemChange.Type.UPDATE -> {
+                        notesViewModel.fetchNotes()
+                        Log.i("Amplify", "Note updated: ${change.item()}")
+                    }
+
+                    DataStoreItemChange.Type.DELETE -> {
+                        notesViewModel.fetchNotes()
+                        Log.i("Amplify", "Note deleted: ${change.item()}")
+                    }
+                }
+            },
+            { Log.e("Amplify", "Error observing changes", it) },
+            { Log.i("Amplify", "Observation completed.") }
+        )
     }
 }
